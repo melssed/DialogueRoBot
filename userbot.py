@@ -19,7 +19,13 @@ def set_bot(bot):
     global _bot
     _bot = bot
 
-app = Client("userbot_session", api_id=API_ID, api_hash=API_HASH)
+SESSION_STRING = os.getenv("SESSION_STRING")
+app = Client(
+    "userbot_session",
+    api_id=API_ID,
+    api_hash=API_HASH,
+    session_string=SESSION_STRING
+)
 
 def get_file_info(message: Message):
     """Получить file_id и тип медиа из сообщения"""

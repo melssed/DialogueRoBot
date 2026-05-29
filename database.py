@@ -1,43 +1,41 @@
-import aiosqlite
+import os
+import asyncpg
 
-DB_PATH = "messages.db"
+_pool = None
 
 async def init_db():
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("""
-            CREATE TABLE IF NOT EXISTS messages (
-                chat_id INTEGER,
-                message_id INTEGER,
-                text TEXT,
-                file_id TEXT,
-                file_type TEXT,
-                date INTEGER,
-                PRIMARY KEY (chat_id, message_id)
-            )
-        """)
-        await db.commit()
+    global _pool
+    database_url = os.getenv("DATABASE_URL")
+    _pool = await asyncpg.create_pool(database_url)
+    await _pool.execute("""
+        CREATE TABLE IF NOT EXISTS messages (
+            chat_id BIGINT,
+            message_id BIGINT,
+            text TEXT,
+            file_id TEXT,
+            file_type TEXT,
+            date BIGINT,
+            PRIMARY KEY (chat_id, message_id)
+        )
+    """)
 
 async def save_message(chat_id, message_id, text, file_id=None, file_type=None, date=0):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("""
-            INSERT OR REPLACE INTO messages 
-            (chat_id, message_id, text, file_id, file_type, date)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (chat_id, message_id, text or "", file_id, file_type, date))
-        await db.commit()
+    await _pool.execute("""
+        INSERT INTO messages (chat_id, message_id, text, file_id, file_type, date)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (chat_id, message_id) DO UPDATE
+        SET text=$3, file_id=$4, file_type=$5, date=$6
+    """, chat_id, message_id, text or "", file_id, file_type, date)
 
 async def get_message(chat_id, message_id):
-    async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute(
-            "SELECT text, file_id, file_type FROM messages WHERE chat_id=? AND message_id=?",
-            (chat_id, message_id)
-        ) as cursor:
-            return await cursor.fetchone()
+    row = await _pool.fetchrow(
+        "SELECT text, file_id, file_type FROM messages WHERE chat_id=$1 AND message_id=$2",
+        chat_id, message_id
+    )
+    return row
 
 async def delete_message(chat_id, message_id):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute(
-            "DELETE FROM messages WHERE chat_id=? AND message_id=?",
-            (chat_id, message_id)
-        )
-        await db.commit()
+    await _pool.execute(
+        "DELETE FROM messages WHERE chat_id=$1 AND message_id=$2",
+        chat_id, message_id
+    )

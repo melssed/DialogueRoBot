@@ -136,6 +136,12 @@ async def on_deleted_message(client, messages):
         old_data = await get_message(message.chat.id, message.id)
         
         if not old_data:
+            # Даже если нет в БД — всё равно уведомляем
+            await _bot.send_message(
+                OWNER_ID,
+                f"🗑 *Сообщение удалено!*\nChat ID: `{message.chat.id}`\nID сообщения: `{message.id}`\n\n_(текст не сохранён)_",
+                parse_mode="Markdown"
+            )
             continue
         
         old_text, file_id, file_type = old_data

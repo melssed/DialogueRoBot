@@ -6,7 +6,10 @@ _pool = None
 async def init_db():
     global _pool
     database_url = os.getenv("DATABASE_URL")
-    _pool = await asyncpg.create_pool(database_url)
+    # Railway иногда даёт postgres:// вместо postgresql://
+    if database_url and database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    _pool = await asyncpg.create_pool(database_url, ssl="require")
     await _pool.execute("""
         CREATE TABLE IF NOT EXISTS messages (
             chat_id BIGINT,
@@ -18,6 +21,7 @@ async def init_db():
             PRIMARY KEY (chat_id, message_id)
         )
     """)
+    print("✅ База данных подключена!")
 
 async def save_message(chat_id, message_id, text, file_id=None, file_type=None, date=0):
     await _pool.execute("""

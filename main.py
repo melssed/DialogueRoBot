@@ -6,18 +6,22 @@ from database import init_db
 import os
 
 async def main():
-    # Инициализируем БД
     await init_db()
-    
-    # Передаём bot в userbot для отправки уведомлений
     set_bot(bot)
-    
     print("✅ Запуск бота и юзербота...")
     
-    # Запускаем оба параллельно
+    async def run_userbot():
+        await app.start()
+        print("✅ Юзербот запущен!")
+        await asyncio.Event().wait()
+
+    async def run_bot():
+        print("✅ Бот запущен!")
+        await dp.start_polling(bot)
+
     await asyncio.gather(
-        app.start(),
-        dp.start_polling(bot)
+        run_userbot(),
+        run_bot()
     )
 
 if __name__ == "__main__":

@@ -1,17 +1,18 @@
 import asyncio
 from aiogram import Bot, Dispatcher
 from bot import bot, dp
-from userbot import app, set_bot
+import userbot
 from database import init_db
-import os
 
 async def main():
     await init_db()
-    set_bot(bot)
-    print("✅ Запуск бота и юзербота...")
+    print("✅ БД подключена!")
+    
+    userbot._bot = bot
+    print("✅ Бот передан в юзербот!")
     
     async def run_userbot():
-        await app.start()
+        await userbot.app.start()
         print("✅ Юзербот запущен!")
         await asyncio.Event().wait()
 
